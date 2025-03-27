@@ -19,14 +19,14 @@ export default function Home() {
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [dimensions, setDimensions] = useState({ width: 800, height: 600 });
+  const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   useEffect(() => {
     const handleResize = () => {
       setDimensions({
-        width: window.innerWidth * 0.9,
-        height: window.innerHeight * 0.8,
+        width: window.innerWidth,
+        height: window.innerHeight,
       });
     };
 
@@ -83,46 +83,52 @@ export default function Home() {
 
   if (!isAuthenticated) {
     return (
-      <main className="flex flex-col items-center justify-center min-h-screen p-4">
-        <h1 className="text-3xl font-bold mb-8">Nostr Profile Explorer</h1>
-        <p className="text-lg mb-8 text-center max-w-md">
-          Connect your Nostr account to explore your network in an interactive bubble chart.
-          Each bubble represents a profile you follow, with size indicating their activity level.
-        </p>
-        <LoginButton onLogin={handleLogin} />
-        <p className="mt-4 text-sm text-gray-500">
-          You'll need a Nostr extension like{' '}
-          <a href="https://getalby.com" target="_blank" rel="noopener noreferrer" className="underline">
-            Alby
-          </a>{' '}
-          or{' '}
-          <a href="https://github.com/fiatjaf/nos2x" target="_blank" rel="noopener noreferrer" className="underline">
-            nos2x
-          </a>
-        </p>
-      </main>
+      <div className="flex flex-col items-center justify-center min-h-screen bg-gray-900 text-white p-4">
+        <div className="max-w-md w-full bg-gray-800 p-8 rounded-lg shadow-2xl">
+          <h1 className="text-3xl font-bold mb-6 text-center">Nostr Profile Explorer</h1>
+          <p className="text-lg mb-8 text-center opacity-80">
+            Connect your Nostr account to visualize your network in an interactive bubble chart.
+          </p>
+          <LoginButton onLogin={handleLogin} />
+          <p className="mt-6 text-sm text-center text-gray-400">
+            You'll need a Nostr extension like{' '}
+            <a href="https://getalby.com" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline">
+              Alby
+            </a>{' '}
+            or{' '}
+            <a href="https://github.com/fiatjaf/nos2x" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline">
+              nos2x
+            </a>
+          </p>
+        </div>
+      </div>
     );
   }
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-xl">Loading profiles...</div>
+      <div className="flex items-center justify-center min-h-screen bg-gray-900 text-white">
+        <div className="text-xl flex items-center">
+          <svg className="animate-spin mr-3 h-8 w-8 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+          </svg>
+          Loading profiles...
+        </div>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
+      <div className="flex items-center justify-center min-h-screen bg-gray-900 text-white">
         <div className="text-xl text-red-500">{error}</div>
       </div>
     );
   }
 
   return (
-    <main className="flex flex-col items-center justify-center min-h-screen p-4">
-      <h1 className="text-3xl font-bold mb-8">Nostr Profile Explorer</h1>
+    <main className="relative w-full h-screen overflow-hidden">
       <BubbleChart
         data={profiles}
         width={dimensions.width}
