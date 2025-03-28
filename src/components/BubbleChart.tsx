@@ -349,8 +349,8 @@ export const BubbleChart: React.FC<BubbleChartProps> = ({
 
     // Add background for timeframe selector
     timeframeContainer.append('rect')
-      .attr('width', 240)
-      .attr('height', 40)
+      .attr('width', 250)
+      .attr('height', 45)
       .attr('rx', 6)
       .attr('ry', 6)
       .attr('fill', 'rgba(50, 50, 50, 0.9)')
@@ -360,7 +360,7 @@ export const BubbleChart: React.FC<BubbleChartProps> = ({
     // Add "Timeframe" label
     timeframeContainer.append('text')
       .attr('x', 10)
-      .attr('y', 15)
+      .attr('y', 18)
       .attr('fill', 'rgba(255, 255, 255, 0.7)')
       .style('font-size', '12px')
       .text('Timeframe');
@@ -369,14 +369,14 @@ export const BubbleChart: React.FC<BubbleChartProps> = ({
     timeframes.forEach((tf, i) => {
       const isSelected = selectedTimeframe === tf.value;
       const buttonGroup = timeframeContainer.append('g')
-        .attr('transform', `translate(${10 + i * 45}, 20)`)
+        .attr('transform', `translate(${10 + i * 48}, 24)`)
         .style('cursor', 'pointer')
         .on('click', () => onTimeframeChange(tf.value));
 
       // Button background
       buttonGroup.append('rect')
-        .attr('width', 40)
-        .attr('height', 18)
+        .attr('width', 42)
+        .attr('height', 20)
         .attr('rx', 4)
         .attr('ry', 4)
         .attr('fill', isSelected ? 'rgba(59, 130, 246, 0.9)' : 'rgba(75, 85, 99, 0.8)')
@@ -385,11 +385,11 @@ export const BubbleChart: React.FC<BubbleChartProps> = ({
 
       // Button text
       buttonGroup.append('text')
-        .attr('x', 20)
-        .attr('y', 12)
+        .attr('x', 21)
+        .attr('y', 14)
         .attr('text-anchor', 'middle')
         .attr('fill', 'white')
-        .style('font-size', '10px')
+        .style('font-size', '11px')
         .style('font-weight', isSelected ? 'bold' : 'normal')
         .text(tf.label);
     });
@@ -397,14 +397,14 @@ export const BubbleChart: React.FC<BubbleChartProps> = ({
     // Add filter toggle in the top center
     const filterContainer = svg.append('g')
       .attr('class', 'filter-toggle')
-      .attr('transform', `translate(${width / 2 - 75}, 20)`)
+      .attr('transform', `translate(${width / 2 - 95}, 20)`)
       .style('cursor', 'pointer')
       .on('click', onToggleFilter);
 
     // Background for filter toggle
     filterContainer.append('rect')
-      .attr('width', 150)
-      .attr('height', 30)
+      .attr('width', 190)
+      .attr('height', 34)
       .attr('rx', 6)
       .attr('ry', 6)
       .attr('fill', 'rgba(50, 50, 50, 0.9)')
@@ -413,8 +413,8 @@ export const BubbleChart: React.FC<BubbleChartProps> = ({
 
     // Toggle switch background
     filterContainer.append('rect')
-      .attr('x', 10)
-      .attr('y', 9)
+      .attr('x', 12)
+      .attr('y', 11)
       .attr('width', 40)
       .attr('height', 12)
       .attr('rx', 6)
@@ -423,8 +423,8 @@ export const BubbleChart: React.FC<BubbleChartProps> = ({
 
     // Toggle switch knob
     filterContainer.append('circle')
-      .attr('cx', showOnlyActive ? 42 : 18)
-      .attr('cy', 15)
+      .attr('cx', showOnlyActive ? 44 : 20)
+      .attr('cy', 17)
       .attr('r', 6)
       .attr('fill', 'white')
       .attr('stroke', 'rgba(0, 0, 0, 0.1)')
@@ -432,8 +432,8 @@ export const BubbleChart: React.FC<BubbleChartProps> = ({
 
     // Toggle label
     filterContainer.append('text')
-      .attr('x', 60)
-      .attr('y', 19)
+      .attr('x', 65)
+      .attr('y', 21)
       .attr('fill', 'white')
       .style('font-size', '12px')
       .text(showOnlyActive ? 'Showing active only' : 'Showing all profiles');
@@ -466,11 +466,11 @@ export const BubbleChart: React.FC<BubbleChartProps> = ({
 
       const statsContainer = svg.append('g')
         .attr('class', 'stats-panel')
-        .attr('transform', `translate(${width - 180}, ${height - 110})`);
+        .attr('transform', `translate(${width - 200}, ${height - 110})`);
 
       // Background for stats panel
       statsContainer.append('rect')
-        .attr('width', 170)
+        .attr('width', 190)
         .attr('height', 100)
         .attr('rx', 6)
         .attr('ry', 6)
@@ -481,7 +481,7 @@ export const BubbleChart: React.FC<BubbleChartProps> = ({
       // Stats title
       statsContainer.append('text')
         .attr('x', 10)
-        .attr('y', 15)
+        .attr('y', 16)
         .attr('fill', 'rgba(255, 255, 255, 0.7)')
         .style('font-size', '10px')
         .text(`Statistics (last ${timeframeLabel})`);
@@ -499,15 +499,15 @@ export const BubbleChart: React.FC<BubbleChartProps> = ({
         // Label
         statsContainer.append('text')
           .attr('x', 10)
-          .attr('y', 30 + i * 14)
+          .attr('y', 32 + i * 14)
           .attr('fill', 'rgba(255, 255, 255, 0.7)')
           .style('font-size', '10px')
           .text(stat.label);
 
         // Value
         statsContainer.append('text')
-          .attr('x', 100)
-          .attr('y', 30 + i * 14)
+          .attr('x', 105)
+          .attr('y', 32 + i * 14)
           .attr('fill', 'white')
           .style('font-size', '10px')
           .style('font-weight', 'bold')
