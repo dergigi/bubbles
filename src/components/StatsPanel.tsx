@@ -38,7 +38,7 @@ export const StatsPanel: React.FC<StatsPanelProps> = ({
   }
 
   return (
-    <div className="absolute bottom-4 right-4 z-10 bg-gray-800 bg-opacity-80 p-3 rounded-lg shadow-lg backdrop-blur-sm max-w-xs">
+    <div className="fixed bottom-4 right-4 z-20 bg-gray-800 bg-opacity-80 p-3 rounded-lg shadow-lg backdrop-blur-sm max-w-xs">
       <div className="text-xs text-gray-300 mb-2">Statistics (last {timeframeLabel})</div>
       <div className="grid grid-cols-2 gap-2 text-xs">
         <div className="text-gray-300">Total Profiles:</div>

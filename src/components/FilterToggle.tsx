@@ -10,7 +10,7 @@ export const FilterToggle: React.FC<FilterToggleProps> = ({
   onToggle,
 }) => {
   return (
-    <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-10 bg-gray-800 bg-opacity-80 p-2 rounded-lg shadow-lg backdrop-blur-sm">
+    <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-20 bg-gray-800 bg-opacity-80 p-2 rounded-lg shadow-lg backdrop-blur-sm">
       <label className="flex items-center cursor-pointer">
         <div className="relative">
           <input
