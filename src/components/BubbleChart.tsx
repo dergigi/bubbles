@@ -25,6 +25,26 @@ interface BubbleChartProps {
   allProfiles: Profile[];
 }
 
+// Function to convert npub to a consistent color
+const npubToColor = (npub: string): string => {
+  // Use a hash function to convert the npub to a number
+  // This ensures we get a consistent color for each npub
+  let hash = 0;
+  for (let i = 0; i < npub.length; i++) {
+    hash = npub.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  
+  // Convert the hash to a 6-digit hex color
+  let color = '#';
+  for (let i = 0; i < 3; i++) {
+    // Extract 2 hex digits for each RGB component
+    const value = (hash >> (i * 8)) & 0xFF;
+    color += ('00' + value.toString(16)).slice(-2);
+  }
+  
+  return color;
+};
+
 export const BubbleChart: React.FC<BubbleChartProps> = ({
   data,
   width,
@@ -101,14 +121,6 @@ export const BubbleChart: React.FC<BubbleChartProps> = ({
       return MIN_BUBBLE_SIZE + ((activity - minActivity) / (maxActivity - minActivity)) * (MAX_BUBBLE_SIZE - MIN_BUBBLE_SIZE);
     };
 
-    // Create color scale for bubbles
-    const colorScale = d3.scaleOrdinal<string>()
-      .domain(data.map(d => d.pubkey))
-      .range([
-        '#ff9999', '#99ff99', '#9999ff', '#ffff99', '#ff99ff', '#99ffff',
-        '#ff8080', '#80ff80', '#8080ff', '#ffff80', '#ff80ff', '#80ffff'
-      ]);
-
     // Create a radial gradient for the bubbles
     const defs = svg.append('defs');
     
@@ -120,15 +132,16 @@ export const BubbleChart: React.FC<BubbleChartProps> = ({
         .attr('cy', '35%')
         .attr('r', '60%');
       
-      const color = colorScale(d.pubkey);
+      // Use the npub to generate a consistent color
+      const color = d3.rgb(npubToColor(d.npub));
       
       gradient.append('stop')
         .attr('offset', '0%')
-        .attr('stop-color', d3.rgb(color).brighter(1).toString());
+        .attr('stop-color', color.brighter(1).toString());
         
       gradient.append('stop')
         .attr('offset', '100%')
-        .attr('stop-color', d3.rgb(color).darker(1).toString());
+        .attr('stop-color', color.darker(1).toString());
     });
 
     // Add glow filter
@@ -226,7 +239,7 @@ export const BubbleChart: React.FC<BubbleChartProps> = ({
     bubbles
       .append('circle')
       .attr('r', (d) => normalizeActivity(d.activity))
-      .style('fill', (d, i) => d.picture ? `url(#profile-img-${i})` : colorScale(d.pubkey))
+      .style('fill', (d, i) => d.picture ? `url(#profile-img-${i})` : `url(#bubble-gradient-${i})`)
       .style('filter', 'url(#glow)')
       .style('opacity', 0.9)
       .style('cursor', 'pointer')
