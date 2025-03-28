@@ -6,6 +6,7 @@ interface Profile extends d3.SimulationNodeDatum {
   name: string;
   activity: number;
   npub: string;
+  picture?: string;
   x?: number;
   y?: number;
   fx?: number | null;
@@ -130,6 +131,58 @@ export const BubbleChart: React.FC<BubbleChartProps> = ({
         .attr('stop-color', d3.rgb(color).darker(1).toString());
     });
 
+    // Add glow filter
+    const filter = defs.append('filter')
+      .attr('id', 'glow')
+      .attr('x', '-50%')
+      .attr('y', '-50%')
+      .attr('width', '200%')
+      .attr('height', '200%');
+      
+    filter.append('feGaussianBlur')
+      .attr('stdDeviation', '2.5')
+      .attr('result', 'coloredBlur');
+      
+    const feMerge = filter.append('feMerge');
+    feMerge.append('feMergeNode')
+      .attr('in', 'coloredBlur');
+    feMerge.append('feMergeNode')
+      .attr('in', 'SourceGraphic');
+
+    // Add pattern for default profile image
+    defs.append('pattern')
+      .attr('id', 'default-profile-img')
+      .attr('patternUnits', 'objectBoundingBox')
+      .attr('width', 1)
+      .attr('height', 1)
+      .append('circle')
+      .attr('cx', 0.5)
+      .attr('cy', 0.5)
+      .attr('r', 0.5)
+      .style('fill', '#4b9fd5');
+
+    // Add patterns for profile pictures
+    data.forEach((d, i) => {
+      if (d.picture) {
+        const pattern = defs.append('pattern')
+          .attr('id', `profile-img-${i}`)
+          .attr('patternUnits', 'objectBoundingBox')
+          .attr('width', 1)
+          .attr('height', 1);
+
+        pattern.append('rect')
+          .attr('width', 1)
+          .attr('height', 1)
+          .attr('fill', colorScale(d.pubkey));
+          
+        pattern.append('image')
+          .attr('xlink:href', d.picture)
+          .attr('width', 1)
+          .attr('height', 1)
+          .attr('preserveAspectRatio', 'xMidYMid slice');
+      }
+    });
+
     const simulation = d3
       .forceSimulation<Profile>(data)
       .force('center', d3.forceCenter(width / 2, height / 2))
@@ -158,34 +211,16 @@ export const BubbleChart: React.FC<BubbleChartProps> = ({
           event.subject.fy = null;
         }));
 
-    // Add glow filter
-    const filter = defs.append('filter')
-      .attr('id', 'glow')
-      .attr('x', '-50%')
-      .attr('y', '-50%')
-      .attr('width', '200%')
-      .attr('height', '200%');
-      
-    filter.append('feGaussianBlur')
-      .attr('stdDeviation', '2.5')
-      .attr('result', 'coloredBlur');
-      
-    const feMerge = filter.append('feMerge');
-    feMerge.append('feMergeNode')
-      .attr('in', 'coloredBlur');
-    feMerge.append('feMergeNode')
-      .attr('in', 'SourceGraphic');
-
-    // Add bubble circles with gradients
+    // Add bubble circles with profile pictures
     bubbles
       .append('circle')
       .attr('r', (d) => normalizeActivity(d.activity))
-      .style('fill', (d, i) => `url(#bubble-gradient-${i})`)
+      .style('fill', (d, i) => d.picture ? `url(#profile-img-${i})` : `url(#bubble-gradient-${i})`)
       .style('filter', 'url(#glow)')
-      .style('opacity', 0.8)
+      .style('opacity', 0.9)
       .style('cursor', 'pointer')
-      .style('stroke', 'rgba(255, 255, 255, 0.2)')
-      .style('stroke-width', 1)
+      .style('stroke', 'rgba(255, 255, 255, 0.3)')
+      .style('stroke-width', 1.5)
       .on('mouseover', function(event, d) {
         d3.select(this)
           .transition()
@@ -194,7 +229,7 @@ export const BubbleChart: React.FC<BubbleChartProps> = ({
           .style('stroke', 'rgba(255, 255, 255, 0.8)')
           .style('stroke-width', 2);
           
-        // Show tooltip
+        // Show profile name as tooltip
         const tooltip = g.append('g')
           .attr('class', 'tooltip')
           .attr('transform', `translate(${d.x},${d.y! - normalizeActivity(d.activity) - 20})`);
@@ -205,32 +240,42 @@ export const BubbleChart: React.FC<BubbleChartProps> = ({
           .style('font-size', '12px')
           .style('font-weight', 'bold')
           .style('text-shadow', '0 1px 2px rgba(0,0,0,0.8)')
+          .text(`${d.name}`);
+          
+        // Show activity count
+        tooltip.append('text')
+          .attr('text-anchor', 'middle')
+          .attr('dy', '14px')
+          .style('fill', 'white')
+          .style('font-size', '10px')
+          .style('font-weight', 'normal')
+          .style('text-shadow', '0 1px 2px rgba(0,0,0,0.8)')
           .text(`${d.activity} events`);
       })
       .on('mouseout', function() {
         d3.select(this)
           .transition()
           .duration(300)
-          .style('opacity', 0.8)
-          .style('stroke', 'rgba(255, 255, 255, 0.2)')
-          .style('stroke-width', 1);
+          .style('opacity', 0.9)
+          .style('stroke', 'rgba(255, 255, 255, 0.3)')
+          .style('stroke-width', 1.5);
           
         // Remove tooltip
         g.selectAll('.tooltip').remove();
       })
       .on('click', (event, d) => onProfileClick(d.npub));
 
-    // Add text labels
+    // Add permanent labels showing just event count
     bubbles
       .append('text')
-      .text((d) => d.name || d.pubkey.slice(0, 8))
+      .attr('dy', (d) => -(normalizeActivity(d.activity) + 5))
       .attr('text-anchor', 'middle')
-      .attr('dy', '.3em')
       .style('fill', 'white')
-      .style('font-weight', 'bold')
-      .style('font-size', (d) => Math.min(normalizeActivity(d.activity) / 3, 14) + 'px')
+      .style('font-size', '10px')
+      .style('font-weight', 'normal')
+      .style('text-shadow', '0 1px 2px rgba(0,0,0,0.8)')
       .style('pointer-events', 'none')
-      .style('text-shadow', '0 0 4px rgba(0, 0, 0, 0.8)');
+      .text(d => d.name);
 
     simulation.on('tick', () => {
       bubbles.attr('transform', (d) => `translate(${d.x},${d.y})`);

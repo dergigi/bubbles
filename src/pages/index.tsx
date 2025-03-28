@@ -7,14 +7,15 @@ import { NDKUser, NDKEvent } from '@nostr-dev-kit/ndk';
 // Maximum number of events to fetch per profile
 const MAX_EVENTS_PER_PROFILE = 210;
 
-// Default timeframe is 1 week in seconds
-const DEFAULT_TIMEFRAME = 7 * 24 * 60 * 60;
+// Default timeframe is 24 hours in seconds
+const DEFAULT_TIMEFRAME = 24 * 60 * 60;
 
 interface Profile {
   pubkey: string;
   name: string;
   activity: number;
   npub: string;
+  picture?: string;
   x?: number;
   y?: number;
   fx?: number | null;
@@ -105,6 +106,7 @@ export default function Home() {
           return {
             pubkey: followedUser.pubkey,
             name: profile?.name || followedUser.pubkey.slice(0, 8),
+            picture: profile?.picture || undefined,
             activity: Array.from(events).length,
             npub: followedUser.npub,
           };
