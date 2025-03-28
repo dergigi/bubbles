@@ -1,8 +1,16 @@
 import { useEffect, useState } from 'react';
 import { BubbleChart } from '@/components/BubbleChart';
 import { LoginButton } from '@/components/LoginButton';
+import { TimeframeSelector } from '@/components/TimeframeSelector';
+import { StatsPanel } from '@/components/StatsPanel';
 import { getNDK, loginWithNip07 } from '@/utils/ndk';
 import { NDKUser, NDKEvent } from '@nostr-dev-kit/ndk';
+
+// Maximum number of events to fetch per profile
+const MAX_EVENTS_PER_PROFILE = 210;
+
+// Default timeframe is 1 week in seconds
+const DEFAULT_TIMEFRAME = 7 * 24 * 60 * 60;
 
 interface Profile {
   pubkey: string;
@@ -21,6 +29,8 @@ export default function Home() {
   const [error, setError] = useState<string | null>(null);
   const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [timeframe, setTimeframe] = useState<number>(DEFAULT_TIMEFRAME);
+  const [currentUser, setCurrentUser] = useState<NDKUser | null>(null);
 
   useEffect(() => {
     const handleResize = () => {
@@ -36,6 +46,13 @@ export default function Home() {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
+  // Effect to fetch data when timeframe changes
+  useEffect(() => {
+    if (isAuthenticated && currentUser) {
+      fetchProfileData(currentUser, timeframe);
+    }
+  }, [timeframe, isAuthenticated, currentUser]);
+
   const handleLogin = async () => {
     try {
       setLoading(true);
@@ -43,7 +60,28 @@ export default function Home() {
 
       // Use the improved login utility
       const user = await loginWithNip07();
+      setCurrentUser(user);
+      
+      // Fetch data with the default timeframe
+      await fetchProfileData(user, timeframe);
+      
+      setIsAuthenticated(true);
+    } catch (err) {
+      console.error("Login error:", err);
+      setError(err instanceof Error ? err.message : 'An error occurred');
+      setIsAuthenticated(false);
+    } finally {
+      setLoading(false);
+    }
+  };
 
+  const fetchProfileData = async (user: NDKUser, selectedTimeframe: number) => {
+    try {
+      setLoading(true);
+      
+      // Calculate timestamp for the selected timeframe
+      const sinceTimestamp = Math.floor(Date.now() / 1000) - selectedTimeframe;
+      
       // Fetch following list
       const following = await user.follows();
       
@@ -54,7 +92,8 @@ export default function Home() {
         const events = await ndk.fetchEvents({
           kinds: [1, 3, 7], // Text notes, contacts, reactions
           authors: [followedUser.pubkey],
-          limit: 100,
+          since: sinceTimestamp,
+          limit: MAX_EVENTS_PER_PROFILE, // Add a limit to prevent excessive data fetching
         });
 
         return {
@@ -67,14 +106,16 @@ export default function Home() {
 
       const profilesData = await Promise.all(profilePromises);
       setProfiles(profilesData);
-      setIsAuthenticated(true);
     } catch (err) {
-      console.error("Login error:", err);
-      setError(err instanceof Error ? err.message : 'An error occurred');
-      setIsAuthenticated(false);
+      console.error("Error fetching profile data:", err);
+      setError(err instanceof Error ? err.message : 'An error fetching profiles');
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleTimeframeChange = (newTimeframe: number) => {
+    setTimeframe(newTimeframe);
   };
 
   const handleProfileClick = (npub: string) => {
@@ -105,7 +146,7 @@ export default function Home() {
     );
   }
 
-  if (loading) {
+  if (loading && profiles.length === 0) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gray-900 text-white">
         <div className="text-xl flex items-center">
@@ -119,7 +160,7 @@ export default function Home() {
     );
   }
 
-  if (error) {
+  if (error && profiles.length === 0) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gray-900 text-white">
         <div className="text-xl text-red-500">{error}</div>
@@ -129,6 +170,25 @@ export default function Home() {
 
   return (
     <main className="relative w-full h-screen overflow-hidden">
+      {/* Timeframe selector */}
+      <TimeframeSelector 
+        selectedTimeframe={timeframe} 
+        onTimeframeChange={handleTimeframeChange} 
+      />
+      
+      {/* Stats panel */}
+      <StatsPanel profiles={profiles} timeframe={timeframe} />
+      
+      {/* Loading indicator when refreshing data */}
+      {loading && profiles.length > 0 && (
+        <div className="absolute top-4 right-4 z-10 bg-gray-800 bg-opacity-80 p-3 rounded-lg shadow-lg">
+          <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+          </svg>
+        </div>
+      )}
+
       <BubbleChart
         data={profiles}
         width={dimensions.width}

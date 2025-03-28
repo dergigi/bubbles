@@ -28,10 +28,23 @@ export const BubbleChart: React.FC<BubbleChartProps> = ({
   const svgRef = useRef<SVGSVGElement>(null);
 
   useEffect(() => {
-    if (!svgRef.current || !data.length) return;
-
+    if (!svgRef.current) return;
+    
     const svg = d3.select(svgRef.current);
     svg.selectAll('*').remove();
+
+    if (data.length === 0) {
+      // Display a message when no data is available
+      svg.append('text')
+        .attr('x', width / 2)
+        .attr('y', height / 2)
+        .attr('text-anchor', 'middle')
+        .attr('fill', 'rgba(255,255,255,0.7)')
+        .style('font-size', '16px')
+        .text('No activity data available for this timeframe');
+      
+      return;
+    }
 
     // Create a group for zoom/pan transformations
     const g = svg.append('g');
@@ -52,6 +65,19 @@ export const BubbleChart: React.FC<BubbleChartProps> = ({
         d3.zoomIdentity
       );
     });
+
+    // Normalize activity values to ensure appropriate bubble sizes
+    const maxActivity = Math.max(...data.map(d => d.activity));
+    const minActivity = Math.min(...data.map(d => d.activity > 0 ? d.activity : Infinity));
+    
+    // Scale activity values between 10 and 60
+    const MIN_BUBBLE_SIZE = 10;
+    const MAX_BUBBLE_SIZE = 60;
+    
+    const normalizeActivity = (activity: number): number => {
+      if (maxActivity === minActivity) return (MIN_BUBBLE_SIZE + MAX_BUBBLE_SIZE) / 2;
+      return MIN_BUBBLE_SIZE + ((activity - minActivity) / (maxActivity - minActivity)) * (MAX_BUBBLE_SIZE - MIN_BUBBLE_SIZE);
+    };
 
     // Create color scale for bubbles
     const colorScale = d3.scaleOrdinal<string>()
@@ -87,7 +113,7 @@ export const BubbleChart: React.FC<BubbleChartProps> = ({
       .forceSimulation<Profile>(data)
       .force('center', d3.forceCenter(width / 2, height / 2))
       .force('charge', d3.forceManyBody().strength(-50))
-      .force('collision', d3.forceCollide<Profile>().radius((d) => d.activity + 30));
+      .force('collision', d3.forceCollide<Profile>().radius((d) => normalizeActivity(d.activity) + 5));
 
     const bubbles = g
       .selectAll('g.bubble-group')
@@ -132,20 +158,33 @@ export const BubbleChart: React.FC<BubbleChartProps> = ({
     // Add bubble circles with gradients
     bubbles
       .append('circle')
-      .attr('r', (d) => d.activity)
+      .attr('r', (d) => normalizeActivity(d.activity))
       .style('fill', (d, i) => `url(#bubble-gradient-${i})`)
       .style('filter', 'url(#glow)')
       .style('opacity', 0.8)
       .style('cursor', 'pointer')
       .style('stroke', 'rgba(255, 255, 255, 0.2)')
       .style('stroke-width', 1)
-      .on('mouseover', function() {
+      .on('mouseover', function(event, d) {
         d3.select(this)
           .transition()
           .duration(300)
           .style('opacity', 1)
           .style('stroke', 'rgba(255, 255, 255, 0.8)')
           .style('stroke-width', 2);
+          
+        // Show tooltip
+        const tooltip = g.append('g')
+          .attr('class', 'tooltip')
+          .attr('transform', `translate(${d.x},${d.y! - normalizeActivity(d.activity) - 20})`);
+          
+        tooltip.append('text')
+          .attr('text-anchor', 'middle')
+          .style('fill', 'white')
+          .style('font-size', '12px')
+          .style('font-weight', 'bold')
+          .style('text-shadow', '0 1px 2px rgba(0,0,0,0.8)')
+          .text(`${d.activity} events`);
       })
       .on('mouseout', function() {
         d3.select(this)
@@ -154,6 +193,9 @@ export const BubbleChart: React.FC<BubbleChartProps> = ({
           .style('opacity', 0.8)
           .style('stroke', 'rgba(255, 255, 255, 0.2)')
           .style('stroke-width', 1);
+          
+        // Remove tooltip
+        g.selectAll('.tooltip').remove();
       })
       .on('click', (event, d) => onProfileClick(d.npub));
 
@@ -165,7 +207,7 @@ export const BubbleChart: React.FC<BubbleChartProps> = ({
       .attr('dy', '.3em')
       .style('fill', 'white')
       .style('font-weight', 'bold')
-      .style('font-size', (d) => Math.min(d.activity / 3, 14) + 'px')
+      .style('font-size', (d) => Math.min(normalizeActivity(d.activity) / 3, 14) + 'px')
       .style('pointer-events', 'none')
       .style('text-shadow', '0 0 4px rgba(0, 0, 0, 0.8)');
 
