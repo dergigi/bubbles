@@ -1,8 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { BubbleChart } from '@/components/BubbleChart';
 import { LoginButton } from '@/components/LoginButton';
 import { TimeframeSelector } from '@/components/TimeframeSelector';
 import { StatsPanel } from '@/components/StatsPanel';
+import { FilterToggle } from '@/components/FilterToggle';
 import { getNDK, loginWithNip07 } from '@/utils/ndk';
 import { NDKUser, NDKEvent } from '@nostr-dev-kit/ndk';
 
@@ -31,6 +32,13 @@ export default function Home() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [timeframe, setTimeframe] = useState<number>(DEFAULT_TIMEFRAME);
   const [currentUser, setCurrentUser] = useState<NDKUser | null>(null);
+  const [showOnlyActive, setShowOnlyActive] = useState(false);
+
+  // Filter profiles based on showOnlyActive toggle
+  const filteredProfiles = useMemo(() => {
+    if (!showOnlyActive) return profiles;
+    return profiles.filter(profile => profile.activity > 0);
+  }, [profiles, showOnlyActive]);
 
   useEffect(() => {
     const handleResize = () => {
@@ -118,6 +126,10 @@ export default function Home() {
     setTimeframe(newTimeframe);
   };
 
+  const handleFilterToggle = () => {
+    setShowOnlyActive(!showOnlyActive);
+  };
+
   const handleProfileClick = (npub: string) => {
     window.open(`https://snort.social/p/${npub}`, '_blank');
   };
@@ -176,6 +188,12 @@ export default function Home() {
         onTimeframeChange={handleTimeframeChange} 
       />
       
+      {/* Filter toggle */}
+      <FilterToggle
+        showOnlyActive={showOnlyActive}
+        onToggle={handleFilterToggle}
+      />
+      
       {/* Stats panel */}
       <StatsPanel profiles={profiles} timeframe={timeframe} />
       
@@ -190,7 +208,7 @@ export default function Home() {
       )}
 
       <BubbleChart
-        data={profiles}
+        data={filteredProfiles}
         width={dimensions.width}
         height={dimensions.height}
         onProfileClick={handleProfileClick}
