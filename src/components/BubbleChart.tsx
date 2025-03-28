@@ -17,6 +17,11 @@ interface BubbleChartProps {
   width: number;
   height: number;
   onProfileClick: (npub: string) => void;
+  selectedTimeframe: number;
+  onTimeframeChange: (timeframe: number) => void;
+  showOnlyActive: boolean;
+  onToggleFilter: () => void;
+  allProfiles: Profile[];
 }
 
 export const BubbleChart: React.FC<BubbleChartProps> = ({
@@ -24,6 +29,11 @@ export const BubbleChart: React.FC<BubbleChartProps> = ({
   width,
   height,
   onProfileClick,
+  selectedTimeframe,
+  onTimeframeChange,
+  showOnlyActive,
+  onToggleFilter,
+  allProfiles
 }) => {
   const svgRef = useRef<SVGSVGElement>(null);
 
@@ -32,6 +42,15 @@ export const BubbleChart: React.FC<BubbleChartProps> = ({
     
     const svg = d3.select(svgRef.current);
     svg.selectAll('*').remove();
+
+    // Set SVG properties explicitly to ensure it's visible
+    svg
+      .attr('width', width)
+      .attr('height', height)
+      .style('position', 'absolute')
+      .style('top', 0)
+      .style('left', 0)
+      .style('z-index', 10);
 
     if (data.length === 0) {
       // Display a message when no data is available
@@ -43,6 +62,8 @@ export const BubbleChart: React.FC<BubbleChartProps> = ({
         .style('font-size', '16px')
         .text('No activity data available for this timeframe');
       
+      // Still render the UI controls even if no data
+      renderUIControls(svg);
       return;
     }
 
@@ -248,26 +269,221 @@ export const BubbleChart: React.FC<BubbleChartProps> = ({
       .attr('x', 20)
       .attr('y', 30)
       .attr('fill', 'rgba(255,255,255,0.5)')
-      .style('font-size', '14px')
-      .text('Scroll to zoom • Drag to pan • Double-click to reset');
+      .style('font-size', '12px')
+      .text('Drag to move bubbles, scroll to zoom');
 
-    return () => {
-      simulation.stop();
-    };
-  }, [data, width, height, onProfileClick]);
+    // Render UI controls after everything else
+    renderUIControls(svg);
+  }, [
+    data, 
+    width, 
+    height, 
+    onProfileClick, 
+    selectedTimeframe, 
+    onTimeframeChange, 
+    showOnlyActive, 
+    onToggleFilter,
+    allProfiles
+  ]);
+
+  // Function to render UI controls directly in SVG
+  const renderUIControls = (svg: d3.Selection<SVGSVGElement, unknown, null, undefined>) => {
+    // Add timeframe selector at the top left
+    const timeframes = [
+      { label: '8h', value: 8 * 60 * 60 },
+      { label: '24h', value: 24 * 60 * 60 },
+      { label: '48h', value: 48 * 60 * 60 },
+      { label: '1w', value: 7 * 24 * 60 * 60 },
+      { label: '1m', value: 30 * 24 * 60 * 60 },
+    ];
+
+    // Create main container for timeframe selector
+    const timeframeContainer = svg.append('g')
+      .attr('class', 'timeframe-selector')
+      .attr('transform', `translate(20, 50)`);
+
+    // Add background for timeframe selector
+    timeframeContainer.append('rect')
+      .attr('width', 240)
+      .attr('height', 40)
+      .attr('rx', 6)
+      .attr('ry', 6)
+      .attr('fill', 'rgba(50, 50, 50, 0.9)')
+      .attr('stroke', 'rgba(255, 255, 255, 0.2)')
+      .attr('stroke-width', 1);
+
+    // Add "Timeframe" label
+    timeframeContainer.append('text')
+      .attr('x', 10)
+      .attr('y', 15)
+      .attr('fill', 'rgba(255, 255, 255, 0.7)')
+      .style('font-size', '12px')
+      .text('Timeframe');
+
+    // Add timeframe buttons
+    timeframes.forEach((tf, i) => {
+      const isSelected = selectedTimeframe === tf.value;
+      const buttonGroup = timeframeContainer.append('g')
+        .attr('transform', `translate(${10 + i * 45}, 20)`)
+        .style('cursor', 'pointer')
+        .on('click', () => onTimeframeChange(tf.value));
+
+      // Button background
+      buttonGroup.append('rect')
+        .attr('width', 40)
+        .attr('height', 18)
+        .attr('rx', 4)
+        .attr('ry', 4)
+        .attr('fill', isSelected ? 'rgba(59, 130, 246, 0.9)' : 'rgba(75, 85, 99, 0.8)')
+        .attr('stroke', isSelected ? 'rgba(147, 197, 253, 0.5)' : 'transparent')
+        .attr('stroke-width', 1);
+
+      // Button text
+      buttonGroup.append('text')
+        .attr('x', 20)
+        .attr('y', 12)
+        .attr('text-anchor', 'middle')
+        .attr('fill', 'white')
+        .style('font-size', '10px')
+        .style('font-weight', isSelected ? 'bold' : 'normal')
+        .text(tf.label);
+    });
+
+    // Add filter toggle in the top center
+    const filterContainer = svg.append('g')
+      .attr('class', 'filter-toggle')
+      .attr('transform', `translate(${width / 2 - 75}, 20)`)
+      .style('cursor', 'pointer')
+      .on('click', onToggleFilter);
+
+    // Background for filter toggle
+    filterContainer.append('rect')
+      .attr('width', 150)
+      .attr('height', 30)
+      .attr('rx', 6)
+      .attr('ry', 6)
+      .attr('fill', 'rgba(50, 50, 50, 0.9)')
+      .attr('stroke', 'rgba(255, 255, 255, 0.2)')
+      .attr('stroke-width', 1);
+
+    // Toggle switch background
+    filterContainer.append('rect')
+      .attr('x', 10)
+      .attr('y', 9)
+      .attr('width', 40)
+      .attr('height', 12)
+      .attr('rx', 6)
+      .attr('ry', 6)
+      .attr('fill', showOnlyActive ? 'rgba(59, 130, 246, 0.9)' : 'rgba(75, 85, 99, 0.8)');
+
+    // Toggle switch knob
+    filterContainer.append('circle')
+      .attr('cx', showOnlyActive ? 42 : 18)
+      .attr('cy', 15)
+      .attr('r', 6)
+      .attr('fill', 'white')
+      .attr('stroke', 'rgba(0, 0, 0, 0.1)')
+      .attr('stroke-width', 1);
+
+    // Toggle label
+    filterContainer.append('text')
+      .attr('x', 60)
+      .attr('y', 19)
+      .attr('fill', 'white')
+      .style('font-size', '12px')
+      .text(showOnlyActive ? 'Showing active only' : 'Showing all profiles');
+
+    // Add stats panel at the bottom right
+    if (allProfiles.length) {
+      // Calculate statistics for the stats panel
+      const totalProfiles = allProfiles.length;
+      const activeProfiles = allProfiles.filter(p => p.activity > 0).length;
+      const totalEvents = allProfiles.reduce((sum, profile) => sum + profile.activity, 0);
+      const averageEvents = totalEvents / totalProfiles;
+      
+      // Get most active profile
+      const sortedProfiles = [...allProfiles].sort((a, b) => b.activity - a.activity);
+      const mostActiveProfile = sortedProfiles[0];
+
+      // Format timeframe label for display
+      let timeframeLabel = '';
+      if (selectedTimeframe <= 8 * 60 * 60) {
+        timeframeLabel = '8 hours';
+      } else if (selectedTimeframe <= 24 * 60 * 60) {
+        timeframeLabel = '24 hours';
+      } else if (selectedTimeframe <= 48 * 60 * 60) {
+        timeframeLabel = '48 hours';
+      } else if (selectedTimeframe <= 7 * 24 * 60 * 60) {
+        timeframeLabel = '1 week';
+      } else {
+        timeframeLabel = '1 month';
+      }
+
+      const statsContainer = svg.append('g')
+        .attr('class', 'stats-panel')
+        .attr('transform', `translate(${width - 180}, ${height - 110})`);
+
+      // Background for stats panel
+      statsContainer.append('rect')
+        .attr('width', 170)
+        .attr('height', 100)
+        .attr('rx', 6)
+        .attr('ry', 6)
+        .attr('fill', 'rgba(50, 50, 50, 0.9)')
+        .attr('stroke', 'rgba(255, 255, 255, 0.2)')
+        .attr('stroke-width', 1);
+
+      // Stats title
+      statsContainer.append('text')
+        .attr('x', 10)
+        .attr('y', 15)
+        .attr('fill', 'rgba(255, 255, 255, 0.7)')
+        .style('font-size', '10px')
+        .text(`Statistics (last ${timeframeLabel})`);
+
+      // Stats data
+      const stats = [
+        {label: 'Total Profiles:', value: totalProfiles.toString()},
+        {label: 'Active Profiles:', value: `${activeProfiles} (${Math.round(activeProfiles / totalProfiles * 100)}%)`},
+        {label: 'Total Events:', value: totalEvents.toString()},
+        {label: 'Average Events:', value: averageEvents.toFixed(1)},
+        {label: 'Most Active:', value: `${mostActiveProfile.name} (${mostActiveProfile.activity})`}
+      ];
+
+      stats.forEach((stat, i) => {
+        // Label
+        statsContainer.append('text')
+          .attr('x', 10)
+          .attr('y', 30 + i * 14)
+          .attr('fill', 'rgba(255, 255, 255, 0.7)')
+          .style('font-size', '10px')
+          .text(stat.label);
+
+        // Value
+        statsContainer.append('text')
+          .attr('x', 100)
+          .attr('y', 30 + i * 14)
+          .attr('fill', 'white')
+          .style('font-size', '10px')
+          .style('font-weight', 'bold')
+          .text(stat.value);
+      });
+    }
+  };
 
   return (
     <svg
       ref={svgRef}
       width={width}
       height={height}
-      style={{ 
-        background: '#121212', 
-        borderRadius: '0px',
+      style={{
         position: 'absolute',
         top: 0,
         left: 0,
-        zIndex: 1
+        width: '100%',
+        height: '100%',
+        display: 'block',
+        zIndex: 10
       }}
     />
   );

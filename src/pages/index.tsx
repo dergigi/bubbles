@@ -1,9 +1,6 @@
 import { useEffect, useState, useMemo } from 'react';
 import { BubbleChart } from '@/components/BubbleChart';
 import { LoginButton } from '@/components/LoginButton';
-import { TimeframeSelector } from '@/components/TimeframeSelector';
-import { StatsPanel } from '@/components/StatsPanel';
-import { FilterToggle } from '@/components/FilterToggle';
 import { getNDK, loginWithNip07 } from '@/utils/ndk';
 import { NDKUser, NDKEvent } from '@nostr-dev-kit/ndk';
 
@@ -96,24 +93,45 @@ export default function Home() {
       // Fetch profiles and their activity
       const ndk = getNDK();
       const profilePromises = Array.from(following).map(async (followedUser: NDKUser) => {
-        const profile = await followedUser.fetchProfile();
-        const events = await ndk.fetchEvents({
-          kinds: [1, 3, 7], // Text notes, contacts, reactions
-          authors: [followedUser.pubkey],
-          since: sinceTimestamp,
-          limit: MAX_EVENTS_PER_PROFILE, // Add a limit to prevent excessive data fetching
-        });
+        try {
+          const profile = await followedUser.fetchProfile();
+          const events = await ndk.fetchEvents({
+            kinds: [1, 3, 7], // Text notes, contacts, reactions
+            authors: [followedUser.pubkey],
+            since: sinceTimestamp,
+            limit: MAX_EVENTS_PER_PROFILE, // Add a limit to prevent excessive data fetching
+          });
 
-        return {
-          pubkey: followedUser.pubkey,
-          name: profile?.name || followedUser.pubkey.slice(0, 8),
-          activity: Array.from(events).length,
-          npub: followedUser.npub,
-        };
+          return {
+            pubkey: followedUser.pubkey,
+            name: profile?.name || followedUser.pubkey.slice(0, 8),
+            activity: Array.from(events).length,
+            npub: followedUser.npub,
+          };
+        } catch (err) {
+          console.warn(`Failed to fetch profile for ${followedUser.pubkey}:`, err);
+          // Return a profile with zero activity so the user still shows up
+          return {
+            pubkey: followedUser.pubkey,
+            name: followedUser.pubkey.slice(0, 8),
+            activity: 0,
+            npub: followedUser.npub,
+          };
+        }
       });
 
-      const profilesData = await Promise.all(profilePromises);
+      // Use Promise.allSettled to handle both successful and failed promises
+      const results = await Promise.allSettled(profilePromises);
+      const profilesData = results
+        .filter(result => result.status === 'fulfilled')
+        .map(result => (result as PromiseFulfilledResult<Profile>).value);
+      
       setProfiles(profilesData);
+      
+      // If we got at least some profiles but had errors, set a less intrusive error
+      if (profilesData.length > 0 && profilesData.length < following.size) {
+        console.warn(`Loaded ${profilesData.length} out of ${following.size} profiles`);
+      }
     } catch (err) {
       console.error("Error fetching profile data:", err);
       setError(err instanceof Error ? err.message : 'An error fetching profiles');
@@ -182,29 +200,18 @@ export default function Home() {
 
   return (
     <div className="fixed inset-0 overflow-hidden bg-gray-900 w-full h-full">
-      {/* The main canvas */}
+      {/* The main canvas with integrated UI elements */}
       <div className="relative w-full h-full">
         <BubbleChart
           data={filteredProfiles}
           width={dimensions.width}
           height={dimensions.height}
           onProfileClick={handleProfileClick}
-        />
-
-        {/* UI Elements */}
-        <TimeframeSelector 
-          selectedTimeframe={timeframe} 
-          onTimeframeChange={handleTimeframeChange} 
-        />
-        
-        <FilterToggle
+          selectedTimeframe={timeframe}
+          onTimeframeChange={handleTimeframeChange}
           showOnlyActive={showOnlyActive}
-          onToggle={handleFilterToggle}
-        />
-        
-        <StatsPanel 
-          profiles={profiles} 
-          timeframe={timeframe} 
+          onToggleFilter={handleFilterToggle}
+          allProfiles={profiles}
         />
         
         {/* Loading indicator when refreshing data */}

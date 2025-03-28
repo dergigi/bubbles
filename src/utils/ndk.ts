@@ -10,10 +10,21 @@ export const initializeNDK = async () => {
         'wss://relay.damus.io',
         'wss://nostr.bitcoiner.social',
         'wss://relay.nostr.band'
-      ]
+      ],
+      // Disable auto-connecting to user relays for more predictable connections
+      autoConnectUserRelays: false
     });
 
-    await ndk.connect();
+    try {
+      // Start connection without awaiting to avoid blocking on slow relays
+      ndk.connect().catch(e => {
+        console.warn("Some relays failed to connect:", e);
+        // We continue anyway as long as at least one relay connects
+      });
+    } catch (error) {
+      console.warn("Connection issue:", error);
+      // Don't throw - we'll try to work with whatever relays connected
+    }
   }
   return ndk;
 };
@@ -38,10 +49,10 @@ export const loginWithNip07 = async (): Promise<NDKUser> => {
     throw new Error('NIP-07 extension not found. Please install a Nostr extension like Alby or nos2x.');
   }
 
-  await initializeNDK();
-  const ndk = getNDK();
-
   try {
+    await initializeNDK();
+    const ndk = getNDK();
+
     // Create a NIP-07 signer
     const signer = new NDKNip07Signer();
     
