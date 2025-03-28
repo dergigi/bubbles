@@ -9,7 +9,8 @@ export const initializeNDK = async () => {
       explicitRelayUrls: [
         'wss://relay.damus.io',
         'wss://nostr.bitcoiner.social',
-        'wss://relay.nostr.band'
+        'wss://relay.nostr.band',
+        'wss://purplepag.es'
       ],
       // Disable auto-connecting to user relays for more predictable connections
       autoConnectUserRelays: false

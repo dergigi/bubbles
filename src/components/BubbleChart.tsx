@@ -172,30 +172,24 @@ export const BubbleChart: React.FC<BubbleChartProps> = ({
           .attr('patternUnits', 'objectBoundingBox')
           .attr('width', 1)
           .attr('height', 1);
-
-        // Remove the rect with colored background to let the image show through
-        // pattern.append('rect')
-        //   .attr('width', 1)
-        //   .attr('height', 1)
-        //   .attr('fill', colorScale(d.pubkey));
           
-        // Add a backup fill in case the image fails to load
+        // Add a solid color background in case the image fails to load
+        pattern.append('rect')
+          .attr('width', 1)
+          .attr('height', 1)
+          .attr('fill', '#4b9fd5');
+          
+        // Add image on top
         const image = pattern.append('image')
           .attr('xlink:href', d.picture)
           .attr('width', 1)
           .attr('height', 1)
           .attr('preserveAspectRatio', 'xMidYMid slice');
           
-        // Handle image loading errors
+        // Handle image loading errors - just use the solid color already set
         image.on('error', function() {
           console.warn(`Failed to load image for ${d.name}: ${d.picture}`);
-          // Remove the failed image and replace with default gradient
           d3.select(this).remove();
-          pattern.append('circle')
-            .attr('cx', 0.5)
-            .attr('cy', 0.5)
-            .attr('r', 0.5)
-            .attr('fill', `url(#bubble-gradient-${i})`);
         });
       }
     });
@@ -232,7 +226,7 @@ export const BubbleChart: React.FC<BubbleChartProps> = ({
     bubbles
       .append('circle')
       .attr('r', (d) => normalizeActivity(d.activity))
-      .style('fill', (d, i) => d.picture ? `url(#profile-img-${i})` : `url(#bubble-gradient-${i})`)
+      .style('fill', (d, i) => d.picture ? `url(#profile-img-${i})` : colorScale(d.pubkey))
       .style('filter', 'url(#glow)')
       .style('opacity', 0.9)
       .style('cursor', 'pointer')
@@ -246,7 +240,7 @@ export const BubbleChart: React.FC<BubbleChartProps> = ({
           .style('stroke', 'rgba(255, 255, 255, 0.8)')
           .style('stroke-width', 2);
           
-        // Show profile name as tooltip
+        // Show activity count as tooltip
         const tooltip = g.append('g')
           .attr('class', 'tooltip')
           .attr('transform', `translate(${d.x},${d.y! - normalizeActivity(d.activity) - 20})`);
@@ -256,16 +250,6 @@ export const BubbleChart: React.FC<BubbleChartProps> = ({
           .style('fill', 'white')
           .style('font-size', '12px')
           .style('font-weight', 'bold')
-          .style('text-shadow', '0 1px 2px rgba(0,0,0,0.8)')
-          .text(`${d.name}`);
-          
-        // Show activity count
-        tooltip.append('text')
-          .attr('text-anchor', 'middle')
-          .attr('dy', '14px')
-          .style('fill', 'white')
-          .style('font-size', '10px')
-          .style('font-weight', 'normal')
           .style('text-shadow', '0 1px 2px rgba(0,0,0,0.8)')
           .text(`${d.activity} events`);
       })
@@ -282,16 +266,16 @@ export const BubbleChart: React.FC<BubbleChartProps> = ({
       })
       .on('click', (event, d) => onProfileClick(d.npub));
 
-    // Add permanent labels showing just event count
+    // Add usernames in the center of bubbles
     bubbles
       .append('text')
-      .attr('dy', (d) => -(normalizeActivity(d.activity) + 5))
       .attr('text-anchor', 'middle')
+      .attr('dy', '.3em')
       .style('fill', 'white')
-      .style('font-size', '10px')
-      .style('font-weight', 'normal')
-      .style('text-shadow', '0 1px 2px rgba(0,0,0,0.8)')
+      .style('font-size', (d) => Math.min(normalizeActivity(d.activity) / 3, 14) + 'px')
+      .style('font-weight', 'bold')
       .style('pointer-events', 'none')
+      .style('text-shadow', '0 1px 2px rgba(0,0,0,0.8)')
       .text(d => d.name);
 
     simulation.on('tick', () => {
@@ -364,10 +348,10 @@ export const BubbleChart: React.FC<BubbleChartProps> = ({
       .attr('class', 'timeframe-selector')
       .attr('transform', `translate(20, 50)`);
 
-    // Add background for timeframe selector
+    // Add background for timeframe selector with increased height
     timeframeContainer.append('rect')
       .attr('width', 250)
-      .attr('height', 45)
+      .attr('height', 54)  // Increased by 20% from 45 to 54
       .attr('rx', 6)
       .attr('ry', 6)
       .attr('fill', 'rgba(50, 50, 50, 0.9)')
@@ -386,7 +370,7 @@ export const BubbleChart: React.FC<BubbleChartProps> = ({
     timeframes.forEach((tf, i) => {
       const isSelected = selectedTimeframe === tf.value;
       const buttonGroup = timeframeContainer.append('g')
-        .attr('transform', `translate(${10 + i * 48}, 24)`)
+        .attr('transform', `translate(${10 + i * 48}, 28)`)  // Moved down from 24 to 28
         .style('cursor', 'pointer')
         .on('click', () => onTimeframeChange(tf.value));
 
