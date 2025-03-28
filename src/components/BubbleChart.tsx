@@ -164,22 +164,39 @@ export const BubbleChart: React.FC<BubbleChartProps> = ({
     // Add patterns for profile pictures
     data.forEach((d, i) => {
       if (d.picture) {
+        // Debug profile picture URLs
+        console.log(`Creating pattern for profile ${d.name} with picture URL: ${d.picture}`);
+
         const pattern = defs.append('pattern')
           .attr('id', `profile-img-${i}`)
           .attr('patternUnits', 'objectBoundingBox')
           .attr('width', 1)
           .attr('height', 1);
 
-        pattern.append('rect')
-          .attr('width', 1)
-          .attr('height', 1)
-          .attr('fill', colorScale(d.pubkey));
+        // Remove the rect with colored background to let the image show through
+        // pattern.append('rect')
+        //   .attr('width', 1)
+        //   .attr('height', 1)
+        //   .attr('fill', colorScale(d.pubkey));
           
-        pattern.append('image')
+        // Add a backup fill in case the image fails to load
+        const image = pattern.append('image')
           .attr('xlink:href', d.picture)
           .attr('width', 1)
           .attr('height', 1)
           .attr('preserveAspectRatio', 'xMidYMid slice');
+          
+        // Handle image loading errors
+        image.on('error', function() {
+          console.warn(`Failed to load image for ${d.name}: ${d.picture}`);
+          // Remove the failed image and replace with default gradient
+          d3.select(this).remove();
+          pattern.append('circle')
+            .attr('cx', 0.5)
+            .attr('cy', 0.5)
+            .attr('r', 0.5)
+            .attr('fill', `url(#bubble-gradient-${i})`);
+        });
       }
     });
 

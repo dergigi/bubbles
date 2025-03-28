@@ -96,6 +96,10 @@ export default function Home() {
       const profilePromises = Array.from(following).map(async (followedUser: NDKUser) => {
         try {
           const profile = await followedUser.fetchProfile();
+          
+          // Debug: Log the profile data to see if picture URLs are coming through
+          console.log('Profile data for', followedUser.pubkey.slice(0, 8), 'profile:', profile);
+          
           const events = await ndk.fetchEvents({
             kinds: [1, 3, 7], // Text notes, contacts, reactions
             authors: [followedUser.pubkey],
@@ -103,10 +107,26 @@ export default function Home() {
             limit: MAX_EVENTS_PER_PROFILE, // Add a limit to prevent excessive data fetching
           });
 
+          // Use explicit picture URL validation
+          let pictureUrl = profile?.picture;
+          if (pictureUrl) {
+            // Make sure the URL is valid and uses https
+            try {
+              const url = new URL(pictureUrl);
+              if (url.protocol !== 'https:') {
+                pictureUrl = undefined;
+                console.warn(`Ignoring non-HTTPS image URL: ${pictureUrl}`);
+              }
+            } catch (e) {
+              pictureUrl = undefined;
+              console.warn(`Invalid image URL: ${pictureUrl}`);
+            }
+          }
+
           return {
             pubkey: followedUser.pubkey,
             name: profile?.name || followedUser.pubkey.slice(0, 8),
-            picture: profile?.picture || undefined,
+            picture: pictureUrl,
             activity: Array.from(events).length,
             npub: followedUser.npub,
           };
