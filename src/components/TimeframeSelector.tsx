@@ -24,7 +24,7 @@ export const TimeframeSelector: React.FC<TimeframeSelectorProps> = ({
   ];
 
   return (
-    <div className="fixed top-4 left-4 z-20 bg-gray-800 bg-opacity-80 p-2 rounded-lg shadow-lg backdrop-blur-sm">
+    <div className="fixed top-4 left-4 z-50 bg-gray-800 bg-opacity-90 p-2 rounded-lg shadow-lg backdrop-blur-sm">
       <div className="text-xs text-gray-300 mb-1">Timeframe</div>
       <div className="flex gap-1">
         {timeframes.map((timeframe) => (

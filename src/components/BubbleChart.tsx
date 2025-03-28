@@ -261,7 +261,14 @@ export const BubbleChart: React.FC<BubbleChartProps> = ({
       ref={svgRef}
       width={width}
       height={height}
-      style={{ background: '#121212', borderRadius: '0px' }}
+      style={{ 
+        background: '#121212', 
+        borderRadius: '0px',
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        zIndex: 1
+      }}
     />
   );
 }; 
